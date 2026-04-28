@@ -1,0 +1,14 @@
+C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\deps\serde-9dbee1b622859ba0.d: C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\build\serde-170d25af167437ff\out/private.rs
+
+C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\deps\libserde-9dbee1b622859ba0.rlib: C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\build\serde-170d25af167437ff\out/private.rs
+
+C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\deps\libserde-9dbee1b622859ba0.rmeta: C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\build\serde-170d25af167437ff\out/private.rs
+
+C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\Daryna\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\build\serde-170d25af167437ff\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\Daryna\\Rust-LB-PZ\\PZ-3-files-index-errors\\target\\debug\\build\\serde-170d25af167437ff\\out

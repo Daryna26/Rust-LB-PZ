@@ -1,0 +1,1 @@
+C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\target\debug\filesindex_cli.exe: C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\filesindex_cli\src\main.rs C:\Users\Daryna\Rust-LB-PZ\PZ-3-files-index-errors\filesindex_core\src\lib.rs
