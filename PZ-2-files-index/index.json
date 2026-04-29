@@ -1,0 +1,17 @@
+[
+  {
+    "path": "docs/report.pdf",
+    "tags": [
+      "work",
+      "important",
+      "pdf"
+    ]
+  },
+  {
+    "path": "photos/image.png",
+    "tags": [
+      "photo",
+      "png"
+    ]
+  }
+]
