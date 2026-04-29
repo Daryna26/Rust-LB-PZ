@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "PZ-1-state-machine"
+name = "pz_8_manual_future"
 version = "0.1.0"
