@@ -12,11 +12,13 @@
 use clap::Parser;
 use image::imageops::FilterType;
 use image::ImageFormat;
+use rayon::prelude::*;
 use reqwest::blocking::Client;
 use std::env;
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
+use std::time::Instant;
 use thiserror::Error;
 
 /// Основний тип помилок застосунку.
@@ -63,21 +65,22 @@ type AppResult<T> = Result<T, AppError>;
 #[command(name = "image_editor")]
 #[command(about = "Resize images and upload them to FS or S3")]
 struct Cli {
-    /// Шлях до файлу зі списком зображень
+    /// Шлях до файлу зі списком зображень.
     #[arg(long)]
     files: String,
 
-    /// Новий розмір (наприклад 300x300)
+    /// Новий розмір, наприклад 300x300.
     #[arg(long)]
     resize: String,
 }
 
 /// Трейт для збереження файлів.
 trait Uploader {
-    /// Завантажує файл.
+    /// Завантажує або зберігає файл.
     ///
     /// # Errors
-    /// Повертає помилку якщо не вдалося зберегти файл.
+    ///
+    /// Повертає помилку, якщо не вдалося зберегти файл.
     fn upload(&self, file_name: &str, data: &[u8]) -> AppResult<()>;
 }
 
@@ -90,7 +93,9 @@ impl FsUploader {
     /// Створює uploader для файлової системи.
     ///
     /// # Errors
-    /// Якщо змінна середовища відсутня або директорію не створено.
+    ///
+    /// Повертає помилку, якщо відсутня змінна середовища
+    /// або директорію неможливо створити.
     fn new() -> AppResult<Self> {
         let dir = PathBuf::from(env::var("MYME_FILES_PATH")?);
         fs::create_dir_all(&dir)?;
@@ -107,12 +112,10 @@ impl Uploader for FsUploader {
     }
 }
 
-/// Збереження у S3.
+/// Збереження у S3-compatible сховище.
 struct S3Uploader {
     endpoint: String,
     bucket: String,
-    access_key: String,
-    secret_key: String,
     client: Client,
 }
 
@@ -120,13 +123,12 @@ impl S3Uploader {
     /// Створює S3 uploader.
     ///
     /// # Errors
-    /// Якщо відсутні змінні середовища.
+    ///
+    /// Повертає помилку, якщо відсутні потрібні змінні середовища.
     fn new() -> AppResult<Self> {
         Ok(Self {
             endpoint: env::var("S3_ENDPOINT")?,
             bucket: env::var("S3_BUCKET")?,
-            access_key: env::var("S3_ACCESS_KEY_ID")?,
-            secret_key: env::var("S3_SECRET_ACCESS_KEY")?,
             client: Client::new(),
         })
     }
@@ -134,19 +136,20 @@ impl S3Uploader {
 
 impl Uploader for S3Uploader {
     fn upload(&self, file_name: &str, data: &[u8]) -> AppResult<()> {
-        let url = format!("{}/{}/{}", self.endpoint, self.bucket, file_name);
+        let url = format!(
+            "{}/{}/{}",
+            self.endpoint.trim_end_matches('/'),
+            self.bucket,
+            file_name
+        );
 
-        let res = self
-            .client
-            .put(&url)
-            .body(data.to_vec())
-            .send()?;
+        let response = self.client.put(&url).body(data.to_vec()).send()?;
 
-        if !res.status().is_success() {
-            return Err(AppError::S3Upload(res.status().to_string()));
+        if !response.status().is_success() {
+            return Err(AppError::S3Upload(response.status().to_string()));
         }
 
-        println!("Uploaded: {}", file_name);
+        println!("Uploaded: {file_name}");
         Ok(())
     }
 }
@@ -154,9 +157,13 @@ impl Uploader for S3Uploader {
 /// Створює uploader залежно від змінної середовища.
 ///
 /// # Errors
-/// Якщо тип uploader невідомий.
+///
+/// Повертає помилку, якщо тип uploader невідомий.
 fn create_uploader() -> AppResult<Box<dyn Uploader>> {
-    match env::var("MYME_UPLOADER").unwrap_or("fs".into()).as_str() {
+    match env::var("MYME_UPLOADER")
+        .unwrap_or_else(|_| "fs".to_string())
+        .as_str()
+    {
         "fs" => Ok(Box::new(FsUploader::new()?)),
         "s3" => Ok(Box::new(S3Uploader::new()?)),
         _ => Err(AppError::UnknownUploader),
@@ -166,26 +173,35 @@ fn create_uploader() -> AppResult<Box<dyn Uploader>> {
 /// Парсить розмір.
 ///
 /// # Errors
-/// Якщо формат неправильний.
-fn parse_resize(s: &str) -> AppResult<(u32, u32)> {
-    let parts: Vec<&str> = s.split('x').collect();
+///
+/// Повертає помилку, якщо формат неправильний.
+fn parse_resize(value: &str) -> AppResult<(u32, u32)> {
+    let parts: Vec<&str> = value.split('x').collect();
 
     if parts.len() != 2 {
         return Err(AppError::InvalidResizeFormat);
     }
 
-    Ok((parts[0].parse()?, parts[1].parse()?))
+    let width = parts[0].parse::<u32>()?;
+    let height = parts[1].parse::<u32>()?;
+
+    if width == 0 || height == 0 {
+        return Err(AppError::InvalidResizeFormat);
+    }
+
+    Ok((width, height))
 }
 
-/// Перевіряє чи це URL.
-fn is_url(s: &str) -> bool {
-    s.starts_with("http")
+/// Перевіряє, чи рядок є URL.
+fn is_url(value: &str) -> bool {
+    value.starts_with("http://") || value.starts_with("https://")
 }
 
-/// Завантажує зображення.
+/// Завантажує зображення з URL або читає локальний файл.
 ///
 /// # Errors
-/// Якщо не вдалося прочитати файл або URL.
+///
+/// Повертає помилку, якщо не вдалося прочитати або завантажити зображення.
 fn load_image(source: &str) -> AppResult<Vec<u8>> {
     if is_url(source) {
         let bytes = reqwest::blocking::get(source)?.bytes()?;
@@ -195,51 +211,77 @@ fn load_image(source: &str) -> AppResult<Vec<u8>> {
     }
 }
 
-/// Обробляє одне зображення.
-///
-/// # Errors
-/// Якщо обробка або збереження не вдалося.
-fn process_image(
-    src: &str,
-    w: u32,
-    h: u32,
-    i: usize,
-    uploader: &dyn Uploader,
-) -> AppResult<()> {
-    let img = image::load_from_memory(&load_image(src)?)?;
-    let resized = img.resize_exact(w, h, FilterType::Lanczos3);
-
-    let mut buf = Cursor::new(Vec::new());
-    resized.write_to(&mut buf, ImageFormat::Png)?;
-
-    uploader.upload(&format!("{}_out.png", i), &buf.into_inner())?;
-    Ok(())
+/// Створює назву вихідного файлу.
+fn create_output_name(index: usize) -> String {
+    format!("resized_image_{index}.png")
 }
 
-/// Основна логіка програми.
+/// Виконує CPU-bound обробку зображення.
 ///
 /// # Errors
-/// Якщо не вдалося прочитати файл або обробити зображення.
+///
+/// Повертає помилку, якщо зображення неможливо прочитати, декодувати,
+/// змінити або закодувати.
+fn process_image_cpu(source: &str, width: u32, height: u32, index: usize) -> AppResult<(String, Vec<u8>)> {
+    let image_bytes = load_image(source)?;
+    let image = image::load_from_memory(&image_bytes)?;
+    let resized = image.resize_exact(width, height, FilterType::Lanczos3);
+
+    let mut buffer = Cursor::new(Vec::new());
+    resized.write_to(&mut buffer, ImageFormat::Png)?;
+
+    let output_name = create_output_name(index);
+
+    Ok((output_name, buffer.into_inner()))
+}
+
 fn run() -> AppResult<()> {
     let cli = Cli::parse();
-    let (w, h) = parse_resize(&cli.resize)?;
+
+    let (width, height) = parse_resize(&cli.resize)?;
     let uploader = create_uploader()?;
 
     let content = fs::read_to_string(&cli.files)?;
 
-    for (i, line) in content.lines().enumerate() {
-        let line = line.trim();
-        if !line.is_empty() {
-            process_image(line, w, h, i, uploader.as_ref())?;
+    let sources: Vec<String> = content
+        .lines()
+        .map(|line| line.trim().trim_matches('"').to_string())
+        .filter(|line| !line.is_empty())
+        .collect();
+
+    if sources.is_empty() {
+        println!("Image list is empty. Nothing to process.");
+        return Ok(());
+    }
+
+    let start = Instant::now();
+
+    let results: Vec<AppResult<(String, Vec<u8>)>> = sources
+        .par_iter()
+        .enumerate()
+        .map(|(index, source)| process_image_cpu(source, width, height, index + 1))
+        .collect();
+
+    for result in results {
+        match result {
+            Ok((file_name, data)) => {
+                uploader.upload(&file_name, &data)?;
+            }
+            Err(error) => {
+                eprintln!("Image processing error: {error}");
+            }
         }
     }
+
+    let elapsed = start.elapsed();
+    println!("Processing finished in: {:?}", elapsed);
 
     Ok(())
 }
 
-/// Точка входу.
+
 fn main() {
-    if let Err(e) = run() {
-        eprintln!("Error: {e}");
+    if let Err(error) = run() {
+        eprintln!("Error: {error}");
     }
 }
