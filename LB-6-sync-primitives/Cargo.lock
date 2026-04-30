@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "PZ-1-state-machine"
+name = "lb_6_sync_primitives"
 version = "0.1.0"
